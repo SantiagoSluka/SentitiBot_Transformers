@@ -21,3 +21,4 @@ def cargar_dataset():
 			return json.load(f)
 	except Exception:
 		return [print("susto")]
+		
