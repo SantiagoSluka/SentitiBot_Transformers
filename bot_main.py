@@ -116,25 +116,62 @@ def comando_sentimiento(message):
         bot.reply_to(message, f"*IA:* {respuesta_ia}", parse_mode="Markdown")
 
 
+
 def buscar_en_dataset(pregunta, dataset):
     pregunta = pregunta.strip().lower()
-
-    # Si el dataset tiene una estructura tipo {"emociones": {...}}, no sirve para esta búsqueda
-    if not isinstance(dataset, list):
-        logging.warning(f"Formato inesperado de dataset: {type(dataset)}. Se esperaba una lista.")
-        return None
-
+    # Recorre cada elemento del dataset
     for item in dataset:
         try:
-            if isinstance(item, dict) and 'pregunta' in item and 'respuesta' in item:
-                if item['pregunta'].strip().lower() == pregunta:
-                    return item['respuesta']
-        except Exception as e:
-            logging.warning(f"Error procesando item {item}: {e}")
+            # Compara la pregunta del usuario con la del dataset (normalizada)
+            if item['pregunta'].strip().lower() == pregunta:
+                # Si hay coincidencia exacta, retorna la respuesta
+                return item['respuesta']
+        except (KeyError, AttributeError) as e:
+            logging.warning(f"Formato inválido en item del dataset: {item}")
             continue
-
+    # Si no encuentra coincidencia, retorna None
     return None
 
+@bot.message_handler(commands=['sentimiento'])
+def comando_sentimiento(message):
+    texto = message.text.replace("/sentimiento", "").strip()
+
+    if not texto:
+        bot.reply_to(message, "⚠️ Usá el comando así:\n`/sentimiento hoy me siento bien`", parse_mode="Markdown")
+        return
+
+    emocion = detectar_emocion(texto)
+
+    rol_base = (
+        "Eres un asistente empático que responde en español. "
+        "Tu tarea es responder brevemente, pero de forma emocionalmente adecuada. "
+        "Tenes primero que decir que emocion detectaste y despues responder al mensaje"
+    )
+
+    try:
+
+        mensajes = [
+            {"role": "system", "content": rol_base},
+            {"role": "user", "content": f"Emoción detectada: {emocion}. Mensaje: {texto}"}
+        ]
+
+        respuesta = cliente_groq.chat.completions.create(
+            model=GROQ_MODEL,
+            messages=mensajes
+        )
+
+        respuesta_texto = respuesta.choices[0].message.content.strip()
+
+
+        bot.reply_to(
+            message,
+            f"🧠 *Emoción detectada:* `{emocion}`\n\n💬 *Respuesta IA:* {respuesta_texto}",
+            parse_mode="Markdown"
+        )
+
+    except Exception as e:
+        logging.error(f"Error en comando_sentimiento: {e}")
+        bot.reply_to(message, "⚠️ Hubo un problema procesando tu emoción, intentá de nuevo más tarde.")
 
 
 if __name__ == "__main__":
@@ -143,4 +180,3 @@ if __name__ == "__main__":
         bot.polling(none_stop=True)
     except Exception as e:
         logging.error(f"Error en el bot: {e}")
-
