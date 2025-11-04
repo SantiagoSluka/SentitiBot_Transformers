@@ -116,40 +116,26 @@ def comando_sentimiento(message):
         bot.reply_to(message, f"*IA:* {respuesta_ia}", parse_mode="Markdown")
 
 
-
 def buscar_en_dataset(pregunta, dataset):
     pregunta = pregunta.strip().lower()
-    # Recorre cada elemento del dataset
+
+    # Si el dataset tiene una estructura tipo {"emociones": {...}}, no sirve para esta búsqueda
+    if not isinstance(dataset, list):
+        logging.warning(f"Formato inesperado de dataset: {type(dataset)}. Se esperaba una lista.")
+        return None
+
     for item in dataset:
         try:
-            # Compara la pregunta del usuario con la del dataset (normalizada)
-            if item['pregunta'].strip().lower() == pregunta:
-                # Si hay coincidencia exacta, retorna la respuesta
-                return item['respuesta']
-        except (KeyError, AttributeError) as e:
-            logging.warning(f"Formato inválido en item del dataset: {item}")
+            if isinstance(item, dict) and 'pregunta' in item and 'respuesta' in item:
+                if item['pregunta'].strip().lower() == pregunta:
+                    return item['respuesta']
+        except Exception as e:
+            logging.warning(f"Error procesando item {item}: {e}")
             continue
-    # Si no encuentra coincidencia, retorna None
+
     return None
 
-@bot.message_handler(func=lambda message: True)
-def manejar_mensaje(message):
-    texto = message.text
-    
-    # Si es el comando /sentimiento, procesar como análisis de sentimiento
-    if texto.startswith('/sentimiento'):
-        comando_sentimiento(message)
-        return
-        
-    # Para otros mensajes, buscar en dataset y usar IA
-    dataset = cargar_dataset()
-    respuesta = buscar_en_dataset(texto, dataset)
-    
-    if respuesta:
-        bot.reply_to(message, respuesta)
-    else:
-        respuesta_ia = generar_respuesta_ia(texto)
-        bot.reply_to(message, respuesta_ia)
+
 
 if __name__ == "__main__":
     logging.info("🤖 Bot iniciado...")
