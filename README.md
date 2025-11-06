@@ -25,7 +25,7 @@ Forma parte del **Capstone Project** del programa **Samsung Innovation Campus (S
 
 ## Requisitos
 - Tener **Telegram** instalado en el teléfono o PC
-- Tener conexión a internet (obvio perro 😎)
+- Tener conexión a internet
 - Buscar el bot o usar el link de acceso rapido
 
 ---
