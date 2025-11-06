@@ -93,7 +93,10 @@ def generar_respuesta_ia(texto):
         logging.error(f"Error al generar respuesta IA: {e}")
         return "Lo siento, hubo un problema al procesar tu mensaje. ¿Podrías intentarlo de nuevo? 🥺"
 
-
+@bot.message_handler(func=lambda message: True)
+def manejar_mensajes_de_texto(message):
+    respuesta_ia = generar_respuesta_ia(message.text)
+    bot.reply_to(message, respuesta_ia)
 
 @bot.message_handler(commands=['sentimiento'])
 def comando_sentimiento(message):
