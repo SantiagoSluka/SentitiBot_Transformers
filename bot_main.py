@@ -132,24 +132,47 @@ def buscar_en_dataset(pregunta, dataset):
     # Si no encuentra coincidencia, retorna None
     return None
 
-@bot.message_handler(func=lambda message: True)
-def manejar_mensaje(message):
-    texto = message.text
-    
-    # Si es el comando /sentimiento, procesar como análisis de sentimiento
-    if texto.startswith('/sentimiento'):
-        comando_sentimiento(message)
+@bot.message_handler(commands=['sentimiento'])
+def comando_sentimiento(message):
+    texto = message.text.replace("/sentimiento", "").strip()
+
+    if not texto:
+        bot.reply_to(message, "⚠️ Usá el comando así:\n`/sentimiento hoy me siento bien`", parse_mode="Markdown")
         return
-        
-    # Para otros mensajes, buscar en dataset y usar IA
-    dataset = cargar_dataset()
-    respuesta = buscar_en_dataset(texto, dataset)
-    
-    if respuesta:
-        bot.reply_to(message, respuesta)
-    else:
-        respuesta_ia = generar_respuesta_ia(texto)
-        bot.reply_to(message, respuesta_ia)
+
+    emocion = detectar_emocion(texto)
+
+    rol_base = (
+        "Eres un asistente empático que responde en español. "
+        "Tu tarea es responder brevemente, pero de forma emocionalmente adecuada. "
+        "Tenes primero que decir que emocion detectaste y despues responder al mensaje"
+    )
+
+    try:
+
+        mensajes = [
+            {"role": "system", "content": rol_base},
+            {"role": "user", "content": f"Emoción detectada: {emocion}. Mensaje: {texto}"}
+        ]
+
+        respuesta = cliente_groq.chat.completions.create(
+            model=GROQ_MODEL,
+            messages=mensajes
+        )
+
+        respuesta_texto = respuesta.choices[0].message.content.strip()
+
+
+        bot.reply_to(
+            message,
+            f"🧠 *Emoción detectada:* `{emocion}`\n\n💬 *Respuesta IA:* {respuesta_texto}",
+            parse_mode="Markdown"
+        )
+
+    except Exception as e:
+        logging.error(f"Error en comando_sentimiento: {e}")
+        bot.reply_to(message, "⚠️ Hubo un problema procesando tu emoción, intentá de nuevo más tarde.")
+
 
 if __name__ == "__main__":
     logging.info("🤖 Bot iniciado...")
@@ -157,5 +180,3 @@ if __name__ == "__main__":
         bot.polling(none_stop=True)
     except Exception as e:
         logging.error(f"Error en el bot: {e}")
-
-
