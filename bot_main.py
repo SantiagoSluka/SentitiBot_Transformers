@@ -98,6 +98,7 @@ def manejar_mensajes_de_texto(message):
     respuesta_ia = generar_respuesta_ia(message.text)
     bot.reply_to(message, respuesta_ia)
 
+
 @bot.message_handler(commands=['sentimiento'])
 def comando_sentimiento(message):
     texto = message.text.replace("/sentimiento", "").strip()
