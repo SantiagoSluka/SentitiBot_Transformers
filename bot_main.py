@@ -7,6 +7,10 @@ from dotenv import load_dotenv
 from textblob import TextBlob
 from conection import DatabaseManager
 from grog_manager import GroqManager
+import cv2
+from fer import FER
+#pip install opencv-python fer
+import tempfile
 
 load_dotenv()
 
@@ -92,6 +96,104 @@ def comando_sentimiento(message):
         logger.error(f"Error al buscar respuesta JSON para {emocion}: {e}")
         bot.reply_to(message, f"Detecté: *{emocion}*. (No pude encontrar una respuesta JSON).", parse_mode="Markdown")
 
+@bot.message_handler(content_types=['photo'])
+def manejar_imagen(message):
+    user = message.from_user
+
+    # Descargar mejor resolución
+    file_id = message.photo[-1].file_id
+    file_info = bot.get_file(file_id)
+    downloaded = bot.download_file(file_info.file_path)
+
+    # Guardar la imagen temporalmente
+    temp_path = f"temp_{user.id}.jpg"
+    with open(temp_path, "wb") as img:
+      @bot.message_handler(content_types=['photo'])
+def manejar_imagen(message):
+    user = message.from_user
+
+    # Descargar imagen
+    file_id = message.photo[-1].file_id
+    file_info = bot.get_file(file_id)
+    downloaded = bot.download_file(file_info.file_path)
+
+    temp_path = f"temp_{user.id}.jpg"
+    with open(temp_path, "wb") as img:
+        img.write(downloaded)
+
+    bot.reply_to(message, "Procesando la imagen... un momento.")
+
+    # --- DETECCIÓN DE CARA + EMOCIÓN ---
+    from fer import FER
+    import cv2
+    detector = FER()
+
+    try:
+        img = cv2.imread(temp_path)
+        emociones = detector.detect_emotions(img)
+
+        if emociones:
+            rostro = emociones[0]
+            emocion_predominante = max(rostro["emotions"], key=rostro["emotions"].get)
+            intensidad = rostro["emotions"][emocion_predominante]
+            texto_emocion = f"🤖 Detecté una emoción predominante: *{emocion_predominante}* (intensidad {round(intensidad, 2)})"
+        else:
+            texto_emocion = "No pude detectar un rostro claro en la imagen."
+    except:
+        texto_emocion = "Hubo un problema al analizar la emoción."
+
+    bot.send_message(message.chat.id, texto_emocion, parse_mode="Markdown")
+  
+    # Respuestas personalizadas según emoción detectada
+    respuestas_emocionales = {
+        "happy": "Veo una sonrisa ahí. Me alegra mucho eso.",
+        "sad": "Parece que estás pasando un momento difícil. Si querés hablar, estoy acá.",
+        "angry": "Te noto con enojo. A veces soltar un poco ayuda.",
+        "surprise": "Wow, sorpresa! Algo inesperado pasó ahí.",
+        "fear": "Parece que hay un poco de miedo. Está bien sentirse así a veces.",
+        "neutral": "Veo una expresión bastante neutra. Todo tranqui."
+    }
+
+    if emociones:
+        if emocion_predominante in respuestas_emocionales:
+            bot.send_message(
+                message.chat.id,
+                respuestas_emocionales[emocion_predominante]
+            )
+        else:
+            bot.send_message(message.chat.id, "Hay una emoción que no pude clasificar bien.")
+
+    # --- ANÁLISIS VISUAL CON GROQ ---
+    resultado = groq_manager.analizar_imagen(
+        user.id,
+        temp_path,
+        prompt="Describe la imagen y el contexto emocional."
+    )
+    bot.send_message(message.chat.id, resultado)
+
+    try:
+        os.remove(temp_path)
+    except:
+        pass
+
+        img.write(downloaded)
+
+    bot.reply_to(message, "Procesando la imagen... un momento.")
+
+    # Usamos Groq para analizar la imagen
+    resultado = groq_manager.analizar_imagen(
+        user.id,
+        temp_path,
+        prompt="Explica lo que ves en la imagen con detalles."
+    )
+
+    bot.send_message(message.chat.id, resultado)
+
+    # Borrar la imagen temporal
+    try:
+        os.remove(temp_path)
+    except:
+        pass
 
 def buscar_en_dataset(pregunta, dataset):
     # Normaliza la pregunta (quita espacios y pasa a minúsculas)
