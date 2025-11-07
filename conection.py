@@ -1,93 +1,99 @@
 import mysql.connector
 from mysql.connector import Error
-from textblob import TextBlob
-from telegram import Update
-from telegram.ext import ApplicationBuilder, MessageHandler, filters, ContextTypes, CommandHandler
-
-def test_connection():
-    try:
-        connection = mysql.connector.connect(
-            host='localhost',
-            user='root', 
-            password='@MtGIoPcpixel423',
-            database='sentitito_bot'
-        )
-
-        if connection.is_connected():
-            print("✅ Conexión exitosa a la base de datos MySQL")
-            connection.close()
-            return True
-
-    except Error as e:
-        print(f"❌ Error al conectar: {e}")
-        return False
-if __name__ == "__main__":
-    if test_connection():
-        print("La conexión a la base de datos fue exitosa.")
-
-    else:
-        print("No se pudo conectar a la base de datos.")
+import os
+import logging
+from dotenv import load_dotenv
 
 
-def close_connection(connection):
-    if connection.is_connected():
-        connection.close()
-        print("🔒 Conexión cerrada correctamente")
+load_dotenv()
+logger = logging.getLogger(__name__)
 
-def analyze_sentiment(text):
-    blob = TextBlob(text)
-    polarity = blob.sentiment.polarity
 
-    if polarity > 0.1:
-        sentiment = "positive"
-    elif polarity < -0.1:
-        sentiment = "negative"
-    else:
-        sentiment = "neutral"
+class DatabaseManager:
+    """
+    Maneja toda la conexión y escritura en la BD siguiendo POO.
+    """
+    
+    def __init__(self):
+        """Lee las variables de la BD al crear el objeto."""
+        self.db_host = os.getenv('DB_HOST')
+        self.db_user = os.getenv('DB_USER')
+        self.db_password = os.getenv('DB_PASSWORD')
+        self.db_name = os.getenv('DB_NAME')
+        
+        # Comprobar que todas las variables existan
+        if not all([self.db_host, self.db_user, self.db_password, self.db_name]):
+            logger.error("Error CRÍTICO: Faltan variables de entorno de la base de datos.")
+            # raise es mejor que return, detiene la ejecución si falta algo vital
+            raise ValueError("Faltan variables de entorno de la BD (DB_HOST, DB_USER, etc.)")
 
-    return sentiment, round(polarity, 3)
-async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user = update.effective_user
-    text = update.message.text
-
-    sentiment, score = analyze_sentiment(text)
-    response = f"🧠 Sentimiento: {sentiment.upper()} (puntaje: {score})"
-
-    await update.message.reply_text(response, parse_mode="Markdown")
-
-conn = test_connection()
-if conn:
-        cursor = conn.cursor()
-cursor.execute("SELECT user_id FROM users WHERE user_id = %s", (user.id,))
-if cursor.fetchone() is None:
-            cursor.execute(
-                "INSERT INTO users (user_id, username) VALUES (%s, %s)",
-                (user_id, username)
+    def create_connection(self):
+        """Crea y devuelve una nueva conexión a la BD."""
+        try:
+            connection = mysql.connector.connect(
+                host=self.db_host,
+                user=self.db_user,
+                password=self.db_password,
+                database=self.db_name
             )
-cursor.execute("""
-            INSERT INTO messages (user_id, text, sentiment, score)
-            VALUES (%s, %s, %s, %s)
-        """, (user.id, text, sentiment, score))
+            if connection.is_connected():
+                return connection
+        except Error as e:
+            logger.error(f"Error al crear conexión a MySQL: {e}")
+            return None
 
-conn.commit()
-cursor.close()
-conn.close()
+    def test_connection(self):
+        """Prueba la conexión y la cierra."""
+        conn = self.create_connection()
+        if conn:
+            conn.close()
+            logger.info("✅ Conexión de prueba a la base de datos exitosa.")
+            return True
+        return False
 
-async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("¡Hola! Soy tu bot analizador de sentimientos . Mandame un mensaje ")
+    def save_message_and_user(self, user_id, username, text, sentiment, score):
+        """
+        Guarda el usuario (si es nuevo) y el mensaje en la BD.
+        Este método contiene toda la lógica de guardado.
+        """
+        conn = None
+        cursor = None
+        try:
+            conn = self.create_connection()
+            if not conn:
+                logger.error("No se pudo crear conexión para guardar mensaje.")
+                return
 
-def main():
-    TOKEN = '8308418084:AAH0FuFFB5sA0yt9g3wPX23iAIGbGF8VLIs'
+            cursor = conn.cursor()
+            
+            # Revisar y crear usuario si no existe
+            cursor.execute("SELECT user_id FROM users WHERE user_id = %s", (user_id,))
+            if cursor.fetchone() is None:
+                # Si no existe, lo creamos.
+                cursor.execute(
+                    "INSERT INTO users (user_id, username) VALUES (%s, %s)",
+                    (user_id, username)
+                )
+            
+            # Insertar el mensaje
+            cursor.execute(
+                """
+                INSERT INTO messages (user_id, text, sentiment, score)
+                VALUES (%s, %s, %s, %s)
+                """,
+                (user_id, text, sentiment, score)
+            )
+            
+            conn.commit() # Confirmamos los cambios
+            logger.info(f"Mensaje de {user_id} guardado en la BD.")
 
-    app = ApplicationBuilder().token(TOKEN).build()
-
-    app.add_handler(CommandHandler("start", start))
-    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
-
-    print(" Bot en marcha... Ctrl+C para detenerlo.")
-    app.run_polling()
-
-
-
-if __name__ == "__main__":
-    main()
+        except Error as e:
+            logger.error(f"Error de BD al guardar mensaje: {e}")
+            if conn:
+                conn.rollback() # Revertir cambios si algo salió mal
+        finally:
+            # Siempre cerrar la conexión y el cursor
+            if cursor:
+                cursor.close()
+            if conn and conn.is_connected():
+                conn.close()
