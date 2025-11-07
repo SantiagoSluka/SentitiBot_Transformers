@@ -39,7 +39,37 @@ class GroqManager:
             # Recuperar o crear el historial del usuario
             if user_id not in self.historial_por_usuario:
                 self.historial_por_usuario[user_id] = []
-            
+
+    def analizar_imagen(self, user_id, image_path, prompt="Describe la imagen."):
+        """
+        Envía una imagen a Groq Vision para analizarla y responder en español.
+        """
+        import base64
+
+        try:
+            with open(image_path, "rb") as img:
+                encoded = base64.b64encode(img.read()).decode("utf-8")
+
+            respuesta = self.client.chat.completions.create(
+                model="llama-vision",
+                messages=[
+                    {"role": "system", "content": "Eres un analizador visual y respondes en español."},
+                    {
+                        "role": "user",
+                        "content": [
+                            {"type": "text", "text": prompt},
+                            {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{encoded}"}}
+                        ]
+                    }
+                ]
+            )
+
+            return respuesta.choices[0].message.content.strip()
+
+        except Exception as e:
+            logger.error(f"Error analizando imagen: {e}")
+            return "No pude analizar la imagen."
+         
             # Añadir el nuevo mensaje del usuario al historial
             self.historial_por_usuario[user_id].append({"role": "user", "content": texto})
 
