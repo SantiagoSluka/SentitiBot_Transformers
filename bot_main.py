@@ -1,161 +1,238 @@
 import telebot  
-import requests
 import json
 import os
 import logging
-from groq import Groq
-import base64
-from dotenv import load_dotenv
 import random
-import mysql.connector
+from dotenv import load_dotenv
+from textblob import TextBlob
+from conection import DatabaseManager
+from grog_manager import GroqManager
+import cv2
+# from fer import fer  <-- Se eliminó esta línea incorrecta
+from fer import FER
+#pip install opencv-python fer
+import tempfile
 
-# Para api de groq, telegram y a futuro qwem si llegamos
 load_dotenv()
 
-# Configuración de logging
 logging.basicConfig(level=logging.INFO, 
                 format='%(asctime)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
 
 TOKEN_BOT_TELEGRAM = os.getenv('TELEGRAM_BOT_TOKEN')
-CLAVE_API_GROQ = os.getenv('GROQ_API_KEY')
-DATASET_PATH = 'emociones.json'
-
-# Modelo de Groq a utilizar
-GROQ_MODEL = "llama-3.1-8b-instant"  # Este es el modelo estable actual de Groq
+CLAVE_API_GROQ = os.getenv('GROQ_API_KEY') 
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+DATASET_PATH = os.path.join(BASE_DIR, 'emociones.json')
 
 bot = telebot.TeleBot(TOKEN_BOT_TELEGRAM)
-cliente_groq = Groq(api_key=CLAVE_API_GROQ)
+
+try:
+    db_manager = DatabaseManager()
+    groq_manager = GroqManager(api_key=CLAVE_API_GROQ) 
+
+except ValueError as e:
+    logger.critical(f"Error al iniciar los manejadores: {e}")
+    logger.critical("El bot NO se iniciará sin las variables de entorno.")
+    exit() 
+
+
+# Funciones del Bot
 
 def cargar_dataset():
-	try:
-		with open(DATASET_PATH, 'r', encoding='utf-8') as f:
-			return json.load(f)
-	except Exception:
-		return []
-	
-
-def detectar_emocion(texto):
+    """Carga el archivo JSON de emociones."""
     try:
-        respuesta = cliente_groq.chat.completions.create(
-            model=GROQ_MODEL,
-            messages=[
-                {
-                    "role": "system",
-                    "content": (
-                        "Sos un analizador emocional. Respondé SOLO con una palabra "
-                        "que describa la emoción principal (ej: alegria, tristeza, enojo, ansiedad, calma, miedo, neutral). "
-                        "Si no podés identificarla, respondé 'neutral'."
-                    )
-                },
-                {"role": "user", "content": texto}
-            ]
-        )
-        emocion = respuesta.choices[0].message.content.strip().lower()
-        return emocion
+        with open(DATASET_PATH, 'r', encoding='utf-8') as f:
+            return json.load(f)
     except Exception as e:
-        logging.error(f"Error al detectar emoción: {e}")
-        return None
+        logger.error(f"Error al cargar {DATASET_PATH}: {e}")
+        return {} 
+    
+def analyze_sentiment(text):
+    """Analiza sentimiento usando TextBlob (para la BD)."""
+    blob = TextBlob(text)
+    polarity = blob.sentiment.polarity
+    if polarity > 0.1:
+        sentiment = "positive"
+    elif polarity < -0.1:
+        sentiment = "negative"
+    else:
+        sentiment = "neutral"
+    return sentiment, round(polarity, 3)
 
 
-
-historial = []  # lista global o guardada por usuario
-
-def generar_respuesta_ia(texto):
-    try:
-        # Agregás el mensaje del usuario al historial
-        historial.append({"role": "user", "content": texto})
-
-        respuesta = cliente_groq.chat.completions.create(
-            model=GROQ_MODEL,
-            messages=[
-                {
-                    "role": "system",
-                    "content": (
-                        "Eres un asistente útil y respondes en español. "
-                        "Debes responder lo justo y necesario para ayudar a la persona que te habla. "
-                        "También tienes en cuenta las emociones de la persona que te habla. "
-                        "Si la persona está triste, tu respuesta debe ser empática y alentadora. "
-                        "Si la persona está feliz, tu respuesta debe ser alegre y positiva. "
-                        "Si la persona está enojada, tu respuesta debe ser calmada y conciliadora."
-                    ),
-                },
-                *historial  # ← acá se pasa todo el historial completo
-            ]
-        )
-
-        # Guardás la respuesta del asistente en el historial
-        respuesta_texto = respuesta.choices[0].message.content.strip()
-        historial.append({"role": "assistant", "content": respuesta_texto})
-
-        return respuesta_texto
-
-    except Exception as e:
-        logging.error(f"Error al generar respuesta IA: {e}")
-        return "Lo siento, hubo un problema al procesar tu mensaje. ¿Podrías intentarlo de nuevo? 🥺"
-
-
+# Manejadores de Mensajes
 
 @bot.message_handler(commands=['sentimiento'])
 def comando_sentimiento(message):
+    """Maneja el comando /sentimiento."""
+    user = message.from_user
     texto = message.text.replace("/sentimiento", "").strip()
 
     if not texto:
         bot.reply_to(message, "⚠️ Usá el comando así:\n`/sentimiento hoy me siento bien`", parse_mode="Markdown")
         return
 
-    emocion = detectar_emocion(texto)
+    #Analizar sentimiento
+    emocion, score = analyze_sentiment(texto)
+    
+    # Guardar en BD usando nuestra clase POO
+    username = user.username or user.first_name or "N/A"
+    db_manager.save_message_and_user(user.id, username, texto, emocion, score)
+
+    # Buscar respuesta en JSON
     dataset = cargar_dataset()
+    respuesta_json = f"Detecté emoción: *{emocion}* (Score: {score})\n\n"
+    
+    try:
+        if emocion == "positive" and "celebracion_logros" in dataset:
+            respuesta_json += random.choice(dataset["celebracion_logros"])['texto']
+        elif emocion == "negative" and "sentimientos_negativos" in dataset:
+            # Asumiendo que quieres acceder a 'tristeza' como ejemplo
+            respuesta_json += random.choice(dataset["sentimientos_negativos"]["tristeza"])['texto']
+        else:
+            respuesta_json += "Gracias por compartir cómo te sientes."
+            
+        bot.reply_to(message, respuesta_json, parse_mode="Markdown")
+        
+    except Exception as e:
+        logger.error(f"Error al buscar respuesta JSON para {emocion}: {e}")
+        bot.reply_to(message, f"Detecté: *{emocion}*. (No pude encontrar una respuesta JSON).", parse_mode="Markdown")
 
-    if emocion and emocion in dataset.get("emociones", {}):
-        respuesta = random.choice(dataset["emociones"][emocion])
-        bot.reply_to(message, f"Detecté emoción: *{emocion}*\n\n{respuesta}", parse_mode="Markdown")
+@bot.message_handler(content_types=['photo'])
+def manejar_imagen(message):
+    user = message.from_user
 
+    # Descargar mejor resolución
+    file_id = message.photo[-1].file_id
+    file_info = bot.get_file(file_id)
+    downloaded = bot.download_file(file_info.file_path)
+
+    # Guardar la imagen temporalmente (Forma corregida y limpia)
+    temp_path = f"temp_{user.id}.jpg"
+    with open(temp_path, "wb") as img:
+        img.write(downloaded)
+
+    bot.reply_to(message, "Procesando la imagen... un momento.")
+
+    detector = FER()
+    
+    # --- CORRECCIÓN 2: Inicializar 'emociones' en None ---
+    emociones = None
+    emocion_predominante = "neutral" # Default
+    texto_emocion = "No pude detectar emociones." # Default
+
+    try:
+        img = cv2.imread(temp_path)
+        # Prevenir crash si cv2 no puede leer la imagen
+        if img is None:
+            raise ValueError("cv2.imread devolvió None. El archivo podría estar corrupto o no ser una imagen.")
+            
+        emociones = detector.detect_emotions(img)
+
+        if emociones:
+            rostro = emociones[0]
+            emocion_predominante = max(rostro["emotions"], key=rostro["emotions"].get)
+            intensidad = rostro["emotions"][emocion_predominante]
+            texto_emocion = f"🤖 Detecté una emoción predominante: *{emocion_predominante}* (intensidad {round(intensidad, 2)})"
+        else:
+            texto_emocion = "No pude detectar un rostro claro en la imagen."
+            
+    # --- CORRECCIÓN 2 (Parte B): Capturar la excepción específica ---
+    except Exception as e:
+        logger.error(f"Error al procesar la imagen con FER: {e}")
+        texto_emocion = "Hubo un problema al analizar la emoción en la foto."
+
+    bot.send_message(message.chat.id, texto_emocion, parse_mode="Markdown")
+
+    # Respuestas personalizadas según emoción detectada
+    respuestas_emocionales = {
+        "happy": "Veo una sonrisa ahí. Me alegra mucho eso.",
+        "sad": "Parece que estás pasando un momento difícil. Si querés hablar, estoy acá.",
+        "angry": "Te noto con enojo. A veces soltar un poco ayuda.",
+        "surprise": "Wow, sorpresa! Algo inesperado pasó ahí.",
+        "fear": "Parece que hay un poco de miedo. Está bien sentirse así a veces.",
+        "neutral": "Veo una expresión bastante neutra. Todo tranqui."
+    }
+
+    # --- CORRECCIÓN 2 (Parte C): Este 'if' ahora es seguro ---
+    # Usamos 'emocion_predominante' que tiene un default
+    if emocion_predominante in respuestas_emocionales:
+        bot.send_message(
+            message.chat.id,
+            respuestas_emocionales[emocion_predominante]
+        )
     else:
-        # Si no hay emoción conocida, usa Groq como chat normal
-        respuesta_ia = generar_respuesta_ia(texto)
-        bot.reply_to(message, f"*IA:* {respuesta_ia}", parse_mode="Markdown")
+        # Esto solo se ejecutaría si la emoción detectada (ej. 'disgust') no está en el dict
+        bot.send_message(message.chat.id, "Hay una emoción que no pude clasificar bien.")
 
+    # --- ANÁLISIS VISUAL CON GROQ ---
+    resultado = groq_manager.analizar_imagen(
+        user.id,
+        temp_path,
+        prompt="Describe la imagen y el contexto emocional."
+    )
+    bot.send_message(message.chat.id, resultado)
+
+    # Borrar la imagen temporal
+    try:
+        os.remove(temp_path)
+    except Exception as e:
+        logger.warning(f"No se pudo borrar la imagen temporal {temp_path}: {e}")
+        pass
+
+    # --- CORRECIÓN 3: Se eliminó todo el bloque de código duplicado y roto que estaba aquí ---
 
 
 def buscar_en_dataset(pregunta, dataset):
+    # Esta función parece no estar terminada o no se usa
+    # (revisar 'emociones.json' para ver si el formato 'pregunta'/'respuesta' existe)
+    # Por ahora, siempre devolverá None.
+    
+    # Normaliza la pregunta (quita espacios y pasa a minúsculas)
     pregunta = pregunta.strip().lower()
-    # Recorre cada elemento del dataset
-    for item in dataset:
-        try:
-            # Compara la pregunta del usuario con la del dataset (normalizada)
-            if item['pregunta'].strip().lower() == pregunta:
-                # Si hay coincidencia exacta, retorna la respuesta
-                return item['respuesta']
-        except (KeyError, AttributeError) as e:
-            logging.warning(f"Formato inválido en item del dataset: {item}")
-            continue
-    # Si no encuentra coincidencia, retorna None
+    # Recorre cada elemento del dataset (dataset es un dict, esto fallará)
+    # Nota: El dataset es un diccionario, no una lista de items con 'pregunta'.
+    # Habría que ajustar esta lógica si se quiere usar.
+    
+    # for item in dataset:
+    #     if item['pregunta'].strip().lower() == pregunta:
+    #         return item['respuesta']
     return None
 
 @bot.message_handler(func=lambda message: True)
 def manejar_mensaje(message):
+    """Manejador principal para todos los mensajes de texto."""
     texto = message.text
+    user = message.from_user
     
-    # Si es el comando /sentimiento, procesar como análisis de sentimiento
-    if texto.startswith('/sentimiento'):
-        comando_sentimiento(message)
-        return
+    # Analizar y Guardar en BD (para TODOS los mensajes)
+    emocion, score = analyze_sentiment(texto)
+    username = user.username or user.first_name or "N/A"
+    db_manager.save_message_and_user(user.id, username, texto, emocion, score)
         
-    # Para otros mensajes, buscar en dataset y usar IA
-    dataset = cargar_dataset()
-    respuesta = buscar_en_dataset(texto, dataset)
+    # lógica de buscar en dataset
+    # dataset = cargar_dataset() # Habría que cargarlo
+    # respuesta_dataset = buscar_en_dataset(texto, dataset) # Esta función necesita revisión
+    respuesta_dataset = None # Forzado a None por ahora
     
-    if respuesta:
-        bot.reply_to(message, respuesta)
+    if respuesta_dataset:
+        bot.reply_to(message, respuesta_dataset)
     else:
-        respuesta_ia = generar_respuesta_ia(texto)
+        # user.id para que pueda usar el historial
+        respuesta_ia = groq_manager.generar_respuesta_ia(user.id, texto)
         bot.reply_to(message, respuesta_ia)
 
+#Ejecución
 if __name__ == "__main__":
-    logging.info("🤖 Bot iniciado...")
-    try:
-        bot.polling(none_stop=True)
-    except Exception as e:
-        logging.error(f"Error en el bot: {e}")
-
-
+    logging.info("🤖 Iniciando Bot...")
+    
+    # Probar la conexión a la base de datos
+    if not db_manager.test_connection():
+        logging.critical("CRÍTICO: No se pudo conectar a la base de datos.")
+        logging.critical("El bot no se iniciará.")
+    else:
+        logging.info("Base de datos conectada. Iniciando polling...")
+        try:
+            bot.polling(none_stop=True)
+        except Exception as e:
+            logging.error(f"Error en el bot: {e}")
