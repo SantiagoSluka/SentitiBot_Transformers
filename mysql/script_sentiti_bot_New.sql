@@ -4,6 +4,9 @@ CREATE DATABASE IF NOT EXISTS sentitito_bot;
 -- 2. Usar la base de datos
 USE sentitito_bot;
 
+-- Transformamos la columna ENUM restringida a TEXTO libre
+ALTER TABLE messages MODIFY COLUMN sentiment VARCHAR(50);
+
 -- 3. Tabla de Usuarios
 CREATE TABLE IF NOT EXISTS users (
     user_id BIGINT PRIMARY KEY,
