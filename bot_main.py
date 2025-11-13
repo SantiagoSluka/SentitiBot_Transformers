@@ -4,9 +4,12 @@ import os
 import logging
 import random
 import base64  
+import tempfile
 from groq import Groq
 from dotenv import load_dotenv
 from conection import DatabaseManager 
+import soundfile as sf # Esta es la nueva librería para audio
+import numpy as np    # soundfile la necesita para funcionar
 
 load_dotenv()
 
@@ -18,6 +21,7 @@ TOKEN_BOT_TELEGRAM = os.getenv('TELEGRAM_BOT_TOKEN')
 CLAVE_API_GROQ = os.getenv('GROQ_API_KEY')
 GROQ_MODEL = "meta-llama/llama-4-scout-17b-16e-instruct" 
 VISION_MODEL = "meta-llama/llama-4-scout-17b-16e-instruct"   
+TRANSCRIPTION_MODEL = "whisper-large-v3"
 
 bot = telebot.TeleBot(TOKEN_BOT_TELEGRAM)
 cliente_groq = Groq(api_key=CLAVE_API_GROQ)
@@ -122,6 +126,7 @@ def generar_respuesta_ia(texto):
         logging.error(f"Error IA (Texto): {e}")
         return "Me quedé pensando... ¿podrías repetirlo? 🥺"
 
+    
 # --- 2. FUNCIÓN DE VISIÓN CORREGIDA (sin 'self') ---
 def analizar_imagen_local(image_path, prompt="Describe la emoción de esta imagen."):
     """Analiza una imagen guardada localmente."""
@@ -146,6 +151,43 @@ def analizar_imagen_local(image_path, prompt="Describe la emoción de esta image
     except Exception as e:
         logger.error(f"Error analizando imagen: {e}")
         return "No pude ver bien la imagen. 🙈"
+
+def convertir_audio_con_soundfile(input_path):
+    """
+    Convierte un archivo de audio (ej: .oga de Telegram) a formato WAV
+    usando la librería soundfile. NO requiere ffmpeg.
+    """
+    # Crea un nombre de archivo de salida, reemplazando la extensión por .wav
+    output_path = input_path.rsplit('.', 1)[0] + ".wav"
+    try:
+        # 1. Lee los datos y la frecuencia de muestreo del archivo de entrada
+        data, samplerate = sf.read(input_path)
+        
+        # 2. Escribe esos datos en un nuevo archivo con formato WAV
+        sf.write(output_path, data, samplerate, format='WAV', subtype='PCM_16')
+        
+        logger.info(f"Audio convertido de {input_path} a {output_path} usando soundfile.")
+        return output_path
+    except Exception as e:
+        logger.error(f"Error al convertir audio con soundfile: {e}")
+        return None
+    
+def transcribir_audio_groq(audio_path):
+    """
+    Envía un archivo de audio a la API de Groq para transcribirlo.
+    """
+    try:
+        with open(audio_path, "rb") as audio_file:
+            transcription = cliente_groq.audio.transcriptions.create(
+                model=TRANSCRIPTION_MODEL,
+                file=audio_file,
+                response_format="text"
+            )
+        return transcription.strip()
+    except Exception as e:
+        logger.error(f"Error al transcribir audio con Groq: {e}")
+        return "No pude entender lo que dijiste en el audio. 🎤"
+    
 
 # --- COMANDOS ---
 
@@ -242,6 +284,43 @@ def manejar_fotos(message):
     except Exception as e:
         logger.error(f"Error procesando foto: {e}")
         bot.reply_to(message, "¡Ups! No pude analizar esa imagen. Intenta con otra.")
+
+# --- 5. MANEJADOR DE AUDIOS (¡PORFIN!) ---
+@bot.message_handler(content_types=['audio', 'voice'])
+def manejar_audio(message):
+    bot.reply_to(message, "Escuchando tu audio... 🎙️ Dame un momento.")
+    try:
+        file_id = message.voice.file_id if message.voice else message.audio.file_id
+        file_info = bot.get_file(file_id)
+        downloaded_file = bot.download_file(file_info.file_path)
+        
+        with tempfile.TemporaryDirectory() as tmpdir:
+            input_path = os.path.join(tmpdir, "audio.oga")
+            with open(input_path, 'wb') as new_file:
+                new_file.write(downloaded_file)
+
+            # --- CAMBIO CLAVE: Usamos la nueva función con soundfile ---
+            wav_path = convertir_audio_con_soundfile(input_path)
+            if not wav_path:
+                bot.reply_to(message, "No pude procesar el formato de tu audio. 😥")
+                return
+
+            # Ahora se transcribe el archivo .wav, que sí es aceptado
+            texto_transcrito = transcribir_audio_groq(wav_path)
+            
+            if "No pude entender" in texto_transcrito:
+                 bot.reply_to(message, texto_transcrito)
+                 return
+
+            bot.reply_to(message, f"📜 *Entendí esto:*\n\n> _{texto_transcrito}_", parse_mode="Markdown")
+
+            respuesta_final_ia = generar_respuesta_ia(texto_transcrito)
+            bot.reply_to(message, respuesta_final_ia)
+
+    except Exception as e:
+        logger.error(f"Error procesando audio: {e}")
+        bot.reply_to(message, "¡Vaya! Hubo un problema con tu audio. ¿Puedes intentar de nuevo?")
+
 
 
 if __name__ == "__main__":
