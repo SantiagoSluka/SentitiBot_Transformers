@@ -17,7 +17,7 @@ class GroqManager:
         
         # --- CORRECCIÓN ---
         # Usamos el modelo de texto correcto
-        self.model = "llama-3.1-8b-instant" 
+        self.model = "meta-llama/llama-4-scout-17b-16e-instruct" 
         
         # Un diccionario para guardar el historial de cada usuario.
         # La clave será user_id, el valor será una lista de mensajes.
@@ -77,7 +77,7 @@ class GroqManager:
             # --- CORRECCIÓN ---
             # Usamos el modelo de visión correcto
             respuesta = self.client.chat.completions.create(
-                model="llama-3-vision-alpha-8b", # <-- ESTE ES EL NOMBRE CORRECTO
+                model="meta-llama/llama-4-scout-17b-16e-instruct", # <-- ESTE ES EL NOMBRE CORRECTO
                 messages=[
                     {"role": "system", "content": "Eres un analizador visual y respondes en español."},
                     {
