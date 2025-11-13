@@ -2,6 +2,7 @@ import telebot
 import json
 import os
 import logging
+import random
 import base64  
 from groq import Groq
 from dotenv import load_dotenv
@@ -39,6 +40,59 @@ def detectar_emocion(texto):
     except Exception as e:
         logging.error(f"Error al detectar emoción: {e}")
         return "neutral"
+
+# --- NUEVA FUNCIÓN PARA CARGAR EL DATASET ---
+def cargar_dataset():
+    """Carga el archivo emociones.json de forma segura."""
+    try:
+        with open('emociones.json', 'r', encoding='utf-8') as f:
+            return json.load(f)
+    except Exception as e:
+        logger.error(f"Error al cargar emociones.json: {e}")
+        return None
+
+# --- NUEVA FUNCIÓN PARA BUSCAR EN EL DATASET ---
+def buscar_respuesta_en_dataset(texto, dataset):
+    """
+    Busca palabras clave en el texto del usuario para encontrar una respuesta
+    predefinida en el dataset. Devuelve una respuesta o None.
+    """
+    if not dataset:
+        return None
+
+    texto_lower = texto.lower()
+
+    # Mapeo de palabras clave a categorías del JSON
+    # Puedes expandir esta lista con más sinónimos
+    keyword_map = {
+        'saludos': ('hola', 'buenas', 'hey'),
+        'tristeza': ('triste', 'deprimido', 'mal', 'llorando'),
+        'ansiedad': ('ansiedad', 'nervioso', 'preocupado', 'miedo'),
+        'estres': ('estrés', 'estresado', 'cansado', 'agotado'),
+        'falta_de_motivacion': ('motivado', 'sin ganas', 'no quiero'),
+        'autoestima_baja': ('autoestima', 'siento feo', 'no sirvo'),
+        'celebracion_logros': ('logré', 'conseguí', 'feliz por', 'gran día'),
+        'despedidas': ('chau', 'adiós', 'nos vemos', 'hasta luego')
+    }
+    
+    # Navegamos el JSON para encontrar la lista de respuestas correcta
+    for categoria_principal, keywords in keyword_map.items():
+        for keyword in keywords:
+            if keyword in texto_lower:
+                # Encontramos una coincidencia
+                respuestas_list = []
+                if categoria_principal in dataset:
+                    respuestas_list = dataset[categoria_principal]
+                elif categoria_principal in dataset.get('sentimientos_negativos', {}):
+                    respuestas_list = dataset['sentimientos_negativos'][categoria_principal]
+                
+                if respuestas_list:
+                    # Elegimos una respuesta aleatoria de la lista encontrada
+                    respuesta_obj = random.choice(respuestas_list)
+                    return respuesta_obj.get('texto')
+    
+    # Si el bucle termina sin encontrar coincidencias
+    return None
 
 def generar_respuesta_ia(texto):
     """Genera respuesta de TEXTO con Guardrails."""
@@ -131,23 +185,31 @@ def comando_diario(message):
     bot.reply_to(message, txt, parse_mode="Markdown")
 
 
-# --- MANEJADORES DE CONTENIDO (Texto e Imagen) ---
-
+# --- MANEJADORES DE CONTENIDO (Texto e Imagen) --- 
 @bot.message_handler(content_types=['text'])
 def manejar_mensajes_de_texto(message):
     user_id = message.from_user.id
     username = message.from_user.username or "Anonimo"
     texto = message.text
 
-    # 1. Detectar emoción del texto
+    # Estos pasos se ejecutan siempre para guardar el registro
     emocion = detectar_emocion(texto)
-
-    # 2. Guardar en BD
     db_manager.save_message_and_user(user_id, username, texto, emocion, 0.0)
 
-    # 3. Responder (con filtro anti-tech)
-    respuesta = generar_respuesta_ia(texto)
-    bot.reply_to(message, respuesta)
+    # Lógica de decisión: ¿Usamos el dataset o la IA?
+    dataset = cargar_dataset()
+    respuesta_dataset = buscar_respuesta_en_dataset(texto, dataset)
+
+    if respuesta_dataset:
+        # Si encontramos una respuesta predefinida, la usamos
+        logger.info("Respuesta encontrada en el dataset.")
+        respuesta_final = respuesta_dataset
+    else:
+        # Si no, llamamos a la IA como antes
+        logger.info("No se encontró respuesta en el dataset. Usando la IA.")
+        respuesta_final = generar_respuesta_ia(texto)
+    
+    bot.reply_to(message, respuesta_final)
 
 # --- 4. MANEJADOR DE FOTOS (¡El que faltaba!) ---
 @bot.message_handler(content_types=['photo'])
