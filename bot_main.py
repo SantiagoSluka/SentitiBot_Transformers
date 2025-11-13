@@ -105,48 +105,18 @@ def generar_respuesta_ia(texto):
         logging.error(f"Error al generar respuesta IA: {e}")
         return "Lo siento, hubo un problema al procesar tu mensaje. ¿Podrías intentarlo de nuevo? 🥺"
 
-@bot.message_handler(func=lambda message: True)
-def manejar_mensajes_de_texto(message):
-    respuesta_ia = generar_respuesta_ia(message.text)
-    bot.reply_to(message, respuesta_ia)
-
-@bot.message_handler(commands=['sentimiento'])
-def comando_sentimiento(message):
-    texto = message.text.replace("/sentimiento", "").strip()
-
-    if not texto:
-        bot.reply_to(message, "⚠️ Usá el comando así:\n`/sentimiento hoy me siento bien`", parse_mode="Markdown")
-        return
-
-    emocion = detectar_emocion(texto)
-    dataset = cargar_dataset()
-
-    if emocion and emocion in dataset.get("emociones", {}):
-        respuesta = random.choice(dataset["emociones"][emocion])
-        bot.reply_to(message, f"Detecté emoción: *{emocion}*\n\n{respuesta}", parse_mode="Markdown")
-
-    else:
-        # Si no hay emoción conocida, usa Groq como chat normal
-        respuesta_ia = generar_respuesta_ia(texto)
-        bot.reply_to(message, f"*IA:* {respuesta_ia}", parse_mode="Markdown")
-
-
-
 def buscar_en_dataset(pregunta, dataset):
     pregunta = pregunta.strip().lower()
-    # Recorre cada elemento del dataset
     for item in dataset:
         try:
-            # Compara la pregunta del usuario con la del dataset (normalizada)
             if item['pregunta'].strip().lower() == pregunta:
-                # Si hay coincidencia exacta, retorna la respuesta
                 return item['respuesta']
         except (KeyError, AttributeError) as e:
             logging.warning(f"Formato inválido en item del dataset: {item}")
             continue
-    # Si no encuentra coincidencia, retorna None
     return None
 
+# --- MANEJADOR DE COMANDOS (debe ir antes del manejador general) ---
 @bot.message_handler(commands=['sentimiento'])
 def comando_sentimiento(message):
     texto = message.text.replace("/sentimiento", "").strip()
@@ -164,7 +134,6 @@ def comando_sentimiento(message):
     )
 
     try:
-
         mensajes = [
             {"role": "system", "content": rol_base},
             {"role": "user", "content": f"Emoción detectada: {emocion}. Mensaje: {texto}"}
@@ -177,7 +146,6 @@ def comando_sentimiento(message):
 
         respuesta_texto = respuesta.choices[0].message.content.strip()
 
-
         bot.reply_to(
             message,
             f"🧠 *Emoción detectada:* `{emocion}`\n\n💬 *Respuesta IA:* {respuesta_texto}",
@@ -189,18 +157,23 @@ def comando_sentimiento(message):
         bot.reply_to(message, "⚠️ Hubo un problema procesando tu emoción, intentá de nuevo más tarde.")
 
 
+# --- MANEJADOR GENERAL DE TEXTO (debe ir al final) ---
+# He cambiado 'func=lambda message: True' por 'content_types=['text']' que es más estándar y claro.
+@bot.message_handler(content_types=['text'])
+def manejar_mensajes_de_texto(message):
+    respuesta_ia = generar_respuesta_ia(message.text)
+    bot.reply_to(message, respuesta_ia)
+
+
 # --- 4. EJECUCIÓN DEL BOT (VERSIÓN MODIFICADA) ---
 if __name__ == "__main__":
-    # Ahora la variable "logger" SÍ existe y este bloque puede funcionar
     logger.info("🤖 Iniciando Bot...")
     
-    # Ahora la variable "db_manager" SÍ existe y este bloque puede funcionar
     if not db_manager.test_connection():
         logger.warning("AVISO: No se pudo conectar a la base de datos. El bot se iniciará, pero no podrá guardar mensajes.")
     else:
         logger.info("✅ Base de datos conectada correctamente.")
 
-    # El bot se inicia SIEMPRE, sin importar el estado de la base de datos.
     try:
         logger.info("🚀 Iniciando polling del bot...")
         bot.polling(none_stop=True, interval=0)
