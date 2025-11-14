@@ -6,13 +6,15 @@ Forma parte del **Capstone Project** del programa **Samsung Innovation Campus (S
 ---
 
 ## 🧠 ¿Qué hace?
-- Recibe mensajes del usuario en Telegram
-- Analiza el **tono emocional** y la **polaridad**
-- Interpreta emociones en **rostros** mediante análisis de imágenes
-- Analiza el contenido emocional de **imágenes generales**
-- Transcribe **audios** usando SoundFile + NumPy
-- Devuelve respuestas como un **asistente emocional personal**
-- Registra datos en **MySQL** y en un **dataset JSON**
+- Recibe mensajes del usuario mediante Telegram.
+- Analiza el **tono emocional** y la **polaridad** de los mensajes.
+- Interpreta emociones en **rostros** mediante análisis de imágenes.
+- Analiza el contenido emocional de **imágenes generales**.
+- Transcribe **audios** usando SoundFile + NumPy.
+- Devuelve respuestas como un **asistente emocional personal**.
+- Mantiene un registro de tus emociones a lo largo del tiempo.
+- Registra los  datos de cada usuario mediante **MySQL**.
+- Utiliza frases mediante un **dataset JSON**.
 
 ---
 
@@ -74,7 +76,7 @@ Asegurate de tener instalados:
 
 - **Python 3.10+**
 - **MySQL Server + MySQL Workbench**
-- **Git** (opcional pero recomendado)
+- **Git** Nesecario para descargar los archivos
 
 #### 📥 Python  
 https://www.python.org/downloads/
