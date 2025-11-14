@@ -93,6 +93,8 @@ TRANSCRIPTION_MODEL = "whisper-large-v3"
 # Se le pasa el token para que la librería 'telebot' sepa a qué bot controlar.
 # A partir de ahora, el objeto 'bot' se usará para enviar mensajes, recibir actualizaciones, etc.
 bot = telebot.TeleBot(TOKEN_BOT_TELEGRAM)
+db_manager = DatabaseManager()
+groq_manager = GroqManager(api_key=CLAVE_API_GROQ)
 
 # Crea una instancia del cliente de Groq. 
 # Se le pasa la clave de la API para que pueda realizar solicitudes autenticadas a los modelos de Groq.
