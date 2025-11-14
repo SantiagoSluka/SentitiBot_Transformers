@@ -67,7 +67,6 @@ def buscar_respuesta_en_dataset(texto, dataset):
     texto_lower = texto.lower()
 
     # Mapeo de palabras clave a categorías del JSON
-    # Puedes expandir esta lista con más sinónimos
     keyword_map = {
         'saludos': ('hola', 'buenas', 'hey'),
         'tristeza': ('triste', 'deprimido', 'mal', 'llorando'),
@@ -309,8 +308,8 @@ def manejar_audio(message):
             texto_transcrito = transcribir_audio_groq(wav_path)
             
             if "No pude entender" in texto_transcrito:
-                 bot.reply_to(message, texto_transcrito)
-                 return
+                bot.reply_to(message, texto_transcrito)
+                return
 
             bot.reply_to(message, f"📜 *Entendí esto:*\n\n> _{texto_transcrito}_", parse_mode="Markdown")
 
