@@ -94,7 +94,7 @@ TRANSCRIPTION_MODEL = "whisper-large-v3"
 # A partir de ahora, el objeto 'bot' se usará para enviar mensajes, recibir actualizaciones, etc.
 bot = telebot.TeleBot(TOKEN_BOT_TELEGRAM)
 db_manager = DatabaseManager()
-groq_manager = GroqManager(api_key=CLAVE_API_GROQ)
+#------------------------------------------------------------------------------------
 
 # Crea una instancia del cliente de Groq. 
 # Se le pasa la clave de la API para que pueda realizar solicitudes autenticadas a los modelos de Groq.
@@ -544,9 +544,9 @@ def manejar_audio(message):
             
             # Si la transcripción devuelve el mensaje de error de la función.
             if "No pude entender" in texto_transcrito:
-                 # Envía ese error al usuario y termina la función.
-                 bot.reply_to(message, texto_transcrito)
-                 return
+                # Envía ese error al usuario y termina la función.
+                bot.reply_to(message, texto_transcrito)
+                return
 
             # Responde al usuario con el texto que se entendió del audio.
             bot.reply_to(message, f"📜 *Entendí esto:*\n\n> _{texto_transcrito}_", parse_mode="Markdown")

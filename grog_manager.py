@@ -24,7 +24,7 @@ class GroqManager:
         self.client = Groq(api_key=api_key)
         
         # Define el nombre del modelo de lenguaje que se usará por defecto para las peticiones.
-        self.model = "llama-3.1-8b-instant" 
+        self.model = "meta-llama/llama-4-scout-17b-16e-instruct" 
         
         # Inicializa un diccionario vacío para almacenar los historiales de conversación, usando el ID de usuario como clave.
         self.historial_por_usuario = {}
