@@ -31,33 +31,39 @@ Forma parte del **Capstone Project** del programa **Samsung Innovation Campus (S
 ## Requisitos
 - Tener **Telegram** instalado en el teléfono o PC  
 - Tener conexión a internet  
-- Buscar el bot o acceder mediante link directo  
+- Buscar el bot o acceder mediante link directo
+- (En caso de ser Desarrollador, PC para ejecutar el servidor)
 
 ---
 
 ## 🚀 Cómo usarlo
 1. Abrí Telegram  
-2. Buscá **Sentitito Bot** o accede desde AQUi 
+2. Buscá **@SENTITIBOT_BOT** o accede desde AQUi https://t.me/SENTITIBOT_BOT
 3. Para analizar texto: /sentimiento + lo que deseas comentar
 4. Para analizar imágenes o emociones faciales: subi una foto al chat
-5. 5. Para transcribir audio y analisarlo: apreta el botoncito del microfono y empeza a hablar
+5. Para transcribir audio y analisarlo: apreta el botoncito del microfono y empeza a grabar
+6. Para poder mantener un registro de tus emociones utiliza: /diario
+
 
 
 ---
 
+
 ## 🎯 Objetivo del proyecto
 En este proyecto buscamos:
-- Explorar cómo la IA puede **acompañar emocionalmente** a los usuarios  
-- Integrar **bot + IA + base de datos + dataset JSON** en un sistema funcional real  
+- Explorar cómo la IA puede **Acompañar Emocionalmente** a los usuarios  
+- Integrar **Bot + IA + Base de Datos + Dataset JSON** en un sistema funcional real  
 - Procesar texto, voz e imágenes en un asistente accesible desde Telegram  
 
 ---
 
 ## 🧑‍💻 Equipo del Capstone Project — Samsung Innovation Campus (SIC):
+Somos el Equipo **Transformers** compuesto por: 
 - Gael Martiniano Baroni
 - Leandro Nuñez
 - Santiago Ivan Sluka Antelo
 - Alexis Kevin Bellido
+Nosotros Realizamos este proyecto como parte del curso intensivo de Samsung con Mirgor 
 
 ---
 
@@ -81,10 +87,13 @@ https://dev.mysql.com/downloads/
 ---
 
 ## 2️⃣ Clonar el repositorio
+Ejecuta en git: git init
+Ejecuta en git: git clone https://github.com/SantiagoSluka/SentitiBot_Transformers.git
+ejecuta en git: git pull
 
 ---
 
-## 3️⃣ Instalar dependencias
+## 3️⃣ Instalar dependencias utilizando
 pip install -r requirements.txt
 
 ---
@@ -114,17 +123,17 @@ Ingresá a MySQL Workbench y ejecutá el query de creación de tablas
 ---
 
 ##7️⃣ Probar funciones
-
-Texto: /sentimiento Hola, hoy me siento bien
-
-Imagen: subir una foto
-
-Emoción facial: sacate una foto de tu cara o sube una foto con un rostro y analizara
-
-Audio: solamente debes enviar el audio
+Para pobrar las funciones podes:
+**Chat con IA**: Manda un mensaje cualquiera 
+**Analizador de Sentimiento**: /sentimiento Estoy triste
+**Diario Personal**: /diario
+**Analizador de Imagenes**: Sube una imagen y deja que la magia suceda
+**Analizador Facial**: Sube una foto de tu cara y ve que emocion desprendes
+**Transcriptor de Audio**: Graba un Audio y conversa mas fluidamente con Sentitito
 
 ----
 
-## Estado del proyecto
-En construcción
+## Estado del proyecto Actual
+V1.0 
+
 
