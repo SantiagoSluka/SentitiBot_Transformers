@@ -92,12 +92,12 @@ pip install -r requirements.txt
 ###4️⃣ Configurar las claves del bot y la base de datos
 
 Creá un archivo .env en la carpeta del proyecto:
-TELEGRAM_TOKEN= 'tu_token_de_telegram'
-GROQ_API_KEY= 'tu_api_key'
-MYSQL_USER= 'root'
-MYSQL_PASSWORD= 'tu_password'
-MYSQL_HOST= 'localhost'
-MYSQL_DATABASE= 'sentitito'
+- TELEGRAM_TOKEN= 'tu_token_de_telegram'
+- GROQ_API_KEY= 'tu_api_key'
+- MYSQL_USER= 'root'
+- MYSQL_PASSWORD= 'tu_password'
+- MYSQL_HOST= 'localhost'
+- MYSQL_DATABASE= 'sentitito'
 
 ---
 
