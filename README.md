@@ -80,16 +80,16 @@ https://dev.mysql.com/downloads/
 
 ---
 
-### 2️⃣ Clonar el repositorio
+## 2️⃣ Clonar el repositorio
 
 ---
 
-### 3️⃣ Instalar dependencias
+## 3️⃣ Instalar dependencias
 pip install -r requirements.txt
 
 ---
 
-###4️⃣ Configurar las claves del bot y la base de datos
+##4️⃣ Configurar las claves del bot y la base de datos
 
 Creá un archivo .env en la carpeta del proyecto:
 - TELEGRAM_TOKEN= 'tu_token_de_telegram'
@@ -101,19 +101,19 @@ Creá un archivo .env en la carpeta del proyecto:
 
 ---
 
-###5️⃣ Configurar la base de datos
+##5️⃣ Configurar la base de datos
 
 Ingresá a MySQL Workbench y ejecutá el query de creación de tablas
 (recomendamos ejecutar query por query para evitar algun error en la creacion)
 
 ---
 
-###6️⃣ Ejecutar el bot
+##6️⃣ Ejecutar el bot
 "python main.py"
 
 ---
 
-7️⃣ Probar funciones
+##7️⃣ Probar funciones
 
 Texto: /sentimiento Hola, hoy me siento bien
 
