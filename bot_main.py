@@ -374,39 +374,13 @@ def transcribir_audio_groq(audio_path):
 @bot.message_handler(commands=['start',])
 def send_welcome(message):
     # El bot responde al mensaje original con un texto de bienvenida.
-    bot.reply_to(message, "🤖 ¡Bienvenido a Sentitito Bot!
-
-Sentitito Bot es un asistente emocional diseñado para ayudarte a entender mejor tus sentimientos y emociones.
-    ✨ ¿Qué podés hacer ahora?
-
-Probá enviar un mensaje, una foto o un audio.
-Y si querés ver más comandos, usá /help")
+    bot.reply_to(message, "🤖 ¡Bienvenido a Sentitito Bot!🤖\nSentitito Bot es un asistente emocional diseñado para ayudarte a entender mejor tus sentimientos y emociones.\n ✨ ¿Qué podés hacer ahora?Probá enviar un mensaje, una foto o un audio.Y si querés ver más comandos, usá /help")
 
 @bot.message_handler(commands=['help'])
 def send_welcome(message):
     # El bot responde al mensaje original con un texto de bienvenida.
-    bot.reply_to(message, "👋 ¡Hola! Soy sentitito, tu bot asistente.
-
-Puedo ayudarte con varias cosas:
-
-💬 Responder mensajes comunes
-Escribime lo que quieras y te contesto al toque.
-
-🧠 Analizar sentimientos
-Usá el comando:
-/sentimiento <mensaje>
-Te digo si el texto transmite alegría, tristeza, enojo, sorpresa, etc.
-
-📘 Registro de emociones
-Con el comando:
-/diario
-Podés llevar un registro de tus estados emocionales y ver cómo fuiste sintiéndote con el tiempo.
-
-🖼️ Analizar imágenes
-Mandame una foto y te cuento qué veo en ella.
-
-🎧 Responder audios
-Enviame un audio y lo transcribo o te respondo según lo que digas.")
+    bot.reply_to(message, "👋 ¡Hola! Soy sentitito, tu bot asistente.🤖\nPuedo ayudarte con varias cosas:\n💬 Responder mensajes comunes\nEscribime lo que quieras y te contesto al toque.\n🧠 Analizar sentimientos\nUsá el comando:\n/sentimiento <mensaje>\nTe digo si el texto transmite alegría, tristeza, enojo, sorpresa, etc.\n📘 Registro de emociones\nCon el comando:\n/diario\nPodés llevar un registro de tus estados emocionales y ver cómo fuiste sintiéndote con el tiempo.\n🖼️ Analizar imágenes\nMandame una foto y te cuento qué veo en ella.\n🎧 Responder audios\n" \
+    "Enviame un audio y lo transcribo o te respondo según lo que digas.")
 
 # Decorador que activa la función 'comando_sentimiento' con el comando /sentimiento.
 @bot.message_handler(commands=['sentimiento'])
@@ -441,24 +415,34 @@ def comando_diario(message):
 
     # Inicializa una cadena de texto con el título del diario.
     txt = "📓 **Tu Diario Emocional:**\n\n"
-    # Itera sobre cada registro (fila) devuelto por la base de datos.
+
+# Itera sobre cada registro (fila) devuelto por la base de datos.
     for item in registros:
-        # Desempaqueta la tupla del registro en variables individuales.
-        texto_msg = item[0]; senti = item[1]
-        # Establece un emoji por defecto.
-        emoji = "✨"
-        # Cambia el emoji basado en la emoción detectada.
-        if "alegr" in senti: emoji = "😊"
-        elif "trist" in senti: emoji = "😢"
-        elif "enojo" in senti: emoji = "😠"
-        elif "ansied" in senti: emoji = "😰"
-        elif "calma" in senti: emoji = "😌"
+        # Desempaqueta la tupla (ahora con 3 elementos)
+        texto_msg = item[0]
+        senti = item[1]
+        source = item[2] # 'telegram', 'audio', 'foto', etc.
+
+        # Establece un emoji basado primero en el 'source'
+        emoji = "✨" # Emoji por defecto (para texto)
+        
+        if source == 'audio':
+            emoji = "🎙️"
+        elif source == 'foto':
+            emoji = "📸"
+        else:
+            # Si es texto (o 'telegram'), usa la lógica de emoción
+            if "alegr" in senti: emoji = "😊"
+            elif "trist" in senti: emoji = "😢"
+            elif "enojo" in senti: emoji = "😠"
+            elif "ansied" in senti: emoji = "😰"
+            elif "calma" in senti: emoji = "😌"
+        
         # Añade una línea formateada al texto de respuesta.
         txt += f"{emoji} *{senti.upper()}*: \"{texto_msg}\"\n"
     
     # Envía el texto completo del diario al usuario.
     bot.reply_to(message, txt, parse_mode="Markdown")
-
 
 # --- MANEJADORES DE CONTENIDO (Texto e Imagen) --- 
 # Este decorador activa la función cuando el bot recibe cualquier mensaje de tipo 'texto' que no sea un comando.
@@ -529,6 +513,23 @@ def manejar_fotos(message):
         # 4. Responde al usuario con el análisis de la imagen.
         bot.reply_to(message, f"👁️ *Análisis de la foto:*\n{analisis}")
 
+        # Para guardar en Diario:
+        try:
+            logger.info("Guardando análisis de foto en el diario...")
+            # Detectamos la emoción general del texto de análisis
+            emocion_foto = detectar_emocion(analisis)
+            user_id = message.from_user.id
+            username = message.from_user.username or "Anonimo"
+            # Creamos un texto descriptivo para el diario
+            texto_para_guardar = f"[Foto] {analisis}"
+            
+            # Guardamos en la BD usando el nuevo parámetro 'source'
+            db_manager.save_message_and_user(
+                user_id, username, texto_para_guardar, emocion_foto, 0.0, source='foto'
+            )
+        except Exception as e:
+            logger.error(f"Error al guardar foto en diario: {e}")
+
         # 5. Elimina el archivo de imagen temporal del disco para limpiar.
         os.remove(temp_path)
 
@@ -583,6 +584,21 @@ def manejar_audio(message):
             # Responde al usuario con el texto que se entendió del audio.
             bot.reply_to(message, f"📜 *Entendí esto:*\n\n> _{texto_transcrito}_", parse_mode="Markdown")
 
+            # Para guardar en Diario:
+            try:
+                logger.info("Guardando transcripción de audio en el diario...")
+                # Detectamos la emoción del texto transcrito
+                emocion_audio = detectar_emocion(texto_transcrito)
+                user_id = message.from_user.id
+                username = message.from_user.username or "Anonimo"
+                
+                # Guardamos en la BD usando el nuevo parámetro 'source'
+                db_manager.save_message_and_user(
+                    user_id, username, texto_transcrito, emocion_audio, 0.0, source='audio'
+                )
+            except Exception as e:
+                logger.error(f"Error al guardar audio en diario: {e}")
+
             # Usa el texto transcrito para generar una respuesta conversacional con la IA.
             respuesta_final_ia = generar_respuesta_ia(texto_transcrito)
             # Envía la respuesta de la IA al usuario.
@@ -612,3 +628,4 @@ if __name__ == "__main__":
     # Inicia el bot. bot.polling() hace que el bot esté constantemente preguntando a Telegram si hay nuevos mensajes.
     # none_stop=True asegura que el bot continúe funcionando incluso si ocurre un error menor.
     bot.polling(none_stop=True)
+    

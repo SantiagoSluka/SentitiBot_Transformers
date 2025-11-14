@@ -62,7 +62,7 @@ class DatabaseManager:
         return False
 
     # Define un método para guardar el mensaje de un usuario y, si es necesario, crear el registro del usuario.
-    def save_message_and_user(self, user_id, username, text, sentiment, score):
+    def save_message_and_user(self, user_id, username, text, sentiment, score, source='telegram'):
         # Inicializa las variables de conexión y cursor a 'None' para que existan fuera del bloque 'try'.
         conn = None
         cursor = None
@@ -90,9 +90,9 @@ class DatabaseManager:
             cursor.execute(
                 """
                 INSERT INTO messages (user_id, text, sentiment, score, source)
-                VALUES (%s, %s, %s, %s, 'telegram')
+                VALUES (%s, %s, %s, %s, %s)
                 """,
-                (user_id, text, sentiment, score)
+                (user_id, text, sentiment, score, source)
             )
             
             # Confirma y guarda permanentemente todas las operaciones SQL realizadas desde el último commit.
@@ -132,7 +132,7 @@ class DatabaseManager:
             # Define la consulta SQL para seleccionar el texto y el sentimiento de los mensajes de un usuario.
             # Los ordena por 'message_id' en orden descendente (los más nuevos primero) y limita el número de resultados.
             query = """
-                SELECT text, sentiment 
+                SELECT text, sentiment, source
                 FROM messages 
                 WHERE user_id = %s 
                 ORDER BY message_id DESC 
