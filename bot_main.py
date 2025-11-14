@@ -371,10 +371,42 @@ def transcribir_audio_groq(audio_path):
 
 # Este decorador le dice a la librería 'telebot' que la función 'send_welcome' debe ejecutarse
 # cuando un usuario envía los comandos /start o /help.
-@bot.message_handler(commands=['start', 'help'])
+@bot.message_handler(commands=['start',])
 def send_welcome(message):
     # El bot responde al mensaje original con un texto de bienvenida.
-    bot.reply_to(message, "¡Hola! Soy Sentitito 💖. Háblame de tu día o envíame una foto para ver cómo te sientes.")
+    bot.reply_to(message, "🤖 ¡Bienvenido a Sentitito Bot!
+
+Sentitito Bot es un asistente emocional diseñado para ayudarte a entender mejor tus sentimientos y emociones.
+    ✨ ¿Qué podés hacer ahora?
+
+Probá enviar un mensaje, una foto o un audio.
+Y si querés ver más comandos, usá /help")
+
+@bot.message_handler(commands=['help'])
+def send_welcome(message):
+    # El bot responde al mensaje original con un texto de bienvenida.
+    bot.reply_to(message, "👋 ¡Hola! Soy sentitito, tu bot asistente.
+
+Puedo ayudarte con varias cosas:
+
+💬 Responder mensajes comunes
+Escribime lo que quieras y te contesto al toque.
+
+🧠 Analizar sentimientos
+Usá el comando:
+/sentimiento <mensaje>
+Te digo si el texto transmite alegría, tristeza, enojo, sorpresa, etc.
+
+📘 Registro de emociones
+Con el comando:
+/diario
+Podés llevar un registro de tus estados emocionales y ver cómo fuiste sintiéndote con el tiempo.
+
+🖼️ Analizar imágenes
+Mandame una foto y te cuento qué veo en ella.
+
+🎧 Responder audios
+Enviame un audio y lo transcribo o te respondo según lo que digas.")
 
 # Decorador que activa la función 'comando_sentimiento' con el comando /sentimiento.
 @bot.message_handler(commands=['sentimiento'])
