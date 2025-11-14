@@ -53,13 +53,11 @@ En este proyecto buscamos:
 
 ---
 
-## 🧑‍💻 Equipo
-Equipo Transformers: 
+## 🧑‍💻 Equipo del Capstone Project — Samsung Innovation Campus (SIC)**:
 - Gael Martiniano Baroni
 - Leandro Nuñez
 - Santiago Ivan Sluka Antelo
 - Alexis Kevin Bellido
-**Capstone Project — Samsung Innovation Campus (SIC)**
 
 ---
 
