@@ -4,17 +4,17 @@ CREATE DATABASE IF NOT EXISTS sentitito_bot;
 -- 2. Usar la base de datos
 USE sentitito_bot;
 
--- Transformamos la columna ENUM restringida a TEXTO libre
+-- 3. Transformamos la columna ENUM restringida a TEXTO libre
 ALTER TABLE messages MODIFY COLUMN sentiment VARCHAR(50);
 
--- 3. Tabla de Usuarios
+-- 4. Tabla de Usuarios
 CREATE TABLE IF NOT EXISTS users (
     user_id BIGINT PRIMARY KEY,
     username VARCHAR(255),
     first_seen DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
--- 4. Tabla de Mensajes
+-- 5. Tabla de Mensajes
 CREATE TABLE IF NOT EXISTS messages (
     message_id INT AUTO_INCREMENT PRIMARY KEY,
     user_id BIGINT,
@@ -30,7 +30,7 @@ CREATE TABLE IF NOT EXISTS messages (
         ON UPDATE CASCADE -- Si cambia el user_id (raro), se actualiza aquí
 );
 
--- 5. Tabla de Estadísticas (opcional para el bot, pero útil)
+-- 6. Tabla de Estadísticas (opcional para el bot, pero útil)
 CREATE TABLE IF NOT EXISTS stats (
     id INT AUTO_INCREMENT PRIMARY KEY,
     total_messages INT DEFAULT 0,
@@ -40,7 +40,7 @@ CREATE TABLE IF NOT EXISTS stats (
     last_update DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
--- 6. Insertar una fila inicial en la tabla de estadísticas
+-- 7. Insertar una fila inicial en la tabla de estadísticas
 -- Esto es útil para que solo tengas que hacer UPDATE y no INSERT/UPDATE
 INSERT INTO stats (id, total_messages, positive_count, negative_count, neutral_count)
 VALUES (1, 0, 0, 0, 0)
