@@ -53,7 +53,7 @@ En este proyecto buscamos:
 
 ---
 
-## 🧑‍💻 Equipo del Capstone Project — Samsung Innovation Campus (SIC)**:
+## 🧑‍💻 Equipo del Capstone Project — Samsung Innovation Campus (SIC):
 - Gael Martiniano Baroni
 - Leandro Nuñez
 - Santiago Ivan Sluka Antelo
