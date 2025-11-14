@@ -1,0 +1,42 @@
+# -----------------------------------------------------------------
+# Archivo de requerimientos para el proyecto "Sentitito Bot"
+# Para instalar todas las dependencias, ejecuta en tu terminal:
+# pip install -r requirements.txt
+# -----------------------------------------------------------------
+
+# Requirements file for Sentitito Bot
+# Use 'pip install -r requirements.txt' to install all dependencies.
+
+# Core library for the Telegram Bot API
+pyTelegramBotAPI==4.17.1
+
+# Official Python client for the Groq API
+groq==0.9.0
+
+# Reads key-value pairs from a .env file and sets them as environment variables
+python-dotenv==1.0.1
+
+# Official driver for connecting Python applications to MySQL databases
+mysql-connector-python==8.4.0
+
+# Library for reading and writing sound files (WAV, FLAC, etc.)
+soundfile==0.12.1
+
+# Fundamental package for scientific computing with Python (dependency for soundfile)
+numpy==1.26.4
+
+# --- Common dependencies often installed alongside the libraries above ---
+# (These are included to make the environment more reproducible)
+
+# Required by 'groq' and 'pyTelegramBotAPI' for making HTTP requests
+requests==2.32.3
+
+# Required by 'requests'
+urllib3==2.2.2
+charset-normalizer==3.3.2
+idna==3.7
+certifi==2024.7.4
+
+# Required by 'groq'
+httpx==0.27.0
+distro==1.9.0
