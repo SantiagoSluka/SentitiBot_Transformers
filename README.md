@@ -119,6 +119,9 @@ Creá un archivo .env en la carpeta del proyecto:
 Ingresá a MySQL Workbench y ejecutá el query de creación de tablas
 (recomendamos ejecutar query por query para evitar algun error en la creacion)
 
+- mini tutorial para conectar base de datos con Python:
+https://youtu.be/mHtALpiRpRI?si=EFmFJcqcfgL_Nats
+
 ---
 
 ##6️⃣ Ejecutar el bot
