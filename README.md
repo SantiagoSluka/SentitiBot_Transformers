@@ -84,6 +84,8 @@ https://www.python.org/downloads/
 #### 📥 MySQL  
 https://dev.mysql.com/downloads/
 
+- dejamos un tutorial de como instalar MySQL:
+https://youtu.be/_K2nOYwOq1E?si=dhSo9GQiyaLSjcgQ
 
 
 ---
